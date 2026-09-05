@@ -23,7 +23,10 @@ REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/HatchetMan111/
 INNER_SCRIPT_PATH="install/fleetbase-install.sh"
 
 CTID="${CTID:-103}"
-HOSTNAME="${HOSTNAME:-fleetbase}"
+# Bewusst CT_HOSTNAME statt HOSTNAME: $HOSTNAME ist auf dem Proxmox-Host immer
+# schon gesetzt (System-Hostname, z.B. "Prox") und wuerde mit ${HOSTNAME:-...}
+# den Default "fleetbase" ueberschreiben -> CT hiese "prox" statt "fleetbase".
+CT_HOSTNAME="${CT_HOSTNAME:-fleetbase}"
 CPU="${CPU:-2}"
 RAM="${RAM:-6144}"
 SWAP="${SWAP:-512}"
@@ -67,6 +70,9 @@ trap trap_err ERR
 log()  { echo "[${APP}] $*"; }
 die()  { echo "[${APP}] FEHLER: $*" >&2; exit 1; }
 
+log "Starte ${APP}-Installation als LXC (CT ${CTID:-103}, Hostname ${CT_HOSTNAME:-fleetbase})."
+log "Hinweis: Gesamtlaufzeit ca. 15-25 Minuten (Template + Docker-Images ~2-3 GB + deploy.sh), je nach CPU/Netzwerk/Disk – bitte nicht abbrechen."
+
 # ------------------------------------------------------------------ Checks ---
 [[ "$(id -u)" == "0" ]] || die "Bitte als root auf dem Proxmox-Host ausfuehren."
 command -v pct >/dev/null 2>&1 || die "pct nicht gefunden. Auf dem Proxmox-Host ausfuehren."
@@ -90,7 +96,7 @@ if qm status "${CTID}" >/dev/null 2>&1; then
     fi
   done
   [[ "${BUMPED}" == "1" ]] || die "Keine freie CT-ID im Bereich gefunden. Bitte CTID manuell setzen, z.B. CTID=200."
-  log "Weiche auf freie ID ${CTID} aus (HOSTNAME=${HOSTNAME})."
+  log "Weiche auf freie ID ${CTID} aus (Hostname ${CT_HOSTNAME})."
 fi
 log "CT-ID: ${CTID}"
 
@@ -139,7 +145,7 @@ if pct status "${CTID}" >/dev/null 2>&1; then
 else
   log "Erstelle LXC ${CTID} (${CPU} vCPU, ${RAM} MB RAM, ${DISK}G Disk) ..."
   pct create "${CTID}" "${TEMPLATE_STORAGE}:vztmpl/${OS_TEMPLATE}" \
-    --hostname "${HOSTNAME}" \
+    --hostname "${CT_HOSTNAME}" \
     --cores "${CPU}" \
     --memory "${RAM}" \
     --swap "${SWAP}" \
@@ -196,7 +202,7 @@ echo ""
 echo "=================================================================="
 echo " ${APP} Installation abgeschlossen"
 echo "=================================================================="
-echo " Container : ${CTID} (${HOSTNAME})"
+echo " Container : ${CTID} (${CT_HOSTNAME})"
 echo " Console   : http://${CT_IP}:${CONSOLE_PORT}  (Web UI)"
 echo " API       : http://${CT_IP}:${API_PORT}      (httpd -> application)"
 echo " Socket    : http://${CT_IP}:${SOCKET_PORT}"

@@ -44,7 +44,9 @@ Nützliche Varianten:
 
 ```bash
 # andere CT-ID / Ressourcen (Variablen oben im Script, alle per Env übersteuerbar)
-CTID=103 CPU=2 RAM=6144 DISK=16 STORAGE=local-lvm BRIDGE=vmbr0 \
+# Hinweis: Hostname-Variable heißt CT_HOSTNAME (nicht HOSTNAME – das ist auf dem
+# Host bereits der System-Hostname und würde den Default überschreiben).
+CTID=103 CT_HOSTNAME=fleetbase CPU=2 RAM=6144 DISK=16 STORAGE=local-lvm BRIDGE=vmbr0 \
   bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/FleetBase-Proxmox/main/install/fleetbase.sh)"
 
 # anderer Upstream-Branch/Fork von Fleetbase (im Container-Script)
