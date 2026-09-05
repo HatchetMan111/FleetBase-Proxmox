@@ -5,7 +5,11 @@ Lokale, einzeilige Installation von [Fleetbase](https://github.com/fleetbase/fle
 als **LXC-Container** auf Proxmox VE.
 
 - **Standard:** LXC CT 103, Debian 12, 2 vCPU, 6 GB RAM, 16 GB Disk (thin), 512 MB Swap,
-  unprivileged, `nesting=1,keyctl=1` (Docker-in-LXC), `onboot: 1`, `vmbr0` DHCP
+  **privileged**, `nesting=1,keyctl=1` (Docker-in-LXC), `onboot: 1`, `vmbr0` DHCP
+  - Privileged ist bewusst Default: `fleetbase/fleetbase-api` enthält Dateien mit
+    UIDs > 700 Mio., die in den 65536er-idmap eines unprivilegierten CTs nicht passen
+    (containerd: `failed to Lchown … invalid argument`). Mit `UNPRIVILEGED=1`
+    bricht der Image-Pull ab.
 - **Modus:** Docker Compose (Upstream-`docker-compose.yml` + generierte `docker-compose.override.yml`),
   offizieller Wizard `scripts/docker-install.sh --non-interactive`, danach CT-IP-Patch
 - **Web UI:** `http://<LXC-IP>:4200` (Console), API `http://<LXC-IP>:8000`, Socket `:38000`
@@ -110,6 +114,17 @@ pct exec 103 -- curl -fsS http://127.0.0.1:8000/ -o /dev/null -w "api %{http_cod
 pct stop 103
 pct destroy 103
 ```
+
+## Troubleshooting
+
+- `failed to Lchown ... invalid argument (Hint: ... subuid/subgid)` beim
+  `fleetbase-api`-Pull: CT läuft unprivileged (z. B. vor dem Privileged-Default
+  erstellt). Privilegien lassen sich nicht nachträglich flippen — CT löschen
+  und Einzeiler erneut laufen lassen (erstellt jetzt privileged):
+  ```bash
+  pct stop 104 && pct destroy 104
+  bash -c "$(wget -qLO - 'https://raw.githubusercontent.com/HatchetMan111/FleetBase-Proxmox/main/install/fleetbase.sh?nocache=3')"
+  ```
 
 ## Dateien
 

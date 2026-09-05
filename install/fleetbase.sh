@@ -32,7 +32,13 @@ STORAGE="${STORAGE:-local-lvm}"            # rootfs storage
 TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-local}"  # vztmpl storage
 BRIDGE="${BRIDGE:-vmbr0}"
 OS_TEMPLATE="${OS_TEMPLATE:-}"             # leer = auto (debian-12-standard)
-UNPRIVILEGED="${UNPRIVILEGED:-1}"
+# Privileged (0) ist hier Default – bewusst, nicht aus Bequemlichkeit:
+# Das Image fleetbase/fleetbase-api enthaelt Dateien mit UIDs > 700 Mio.
+# (z.B. alte npm-Artefakte), die sich im 65536er-idmap eines unprivilegierten
+# CTs nicht abbilden lassen -> containerd bricht ab mit
+# "failed to Lchown ... invalid argument (Hint: ... subuid/subgid)".
+# Mit UNPRIVILEGED=1 laeuft das Script bis zum Image-Pull und scheitert dort.
+UNPRIVILEGED="${UNPRIVILEGED:-0}"
 ONBOOT="${ONBOOT:-1}"
 
 CONSOLE_PORT="4200"
@@ -121,6 +127,15 @@ fi
 # vgl. paperclip CT101: features=nesting=1,keyctl=1).
 if pct status "${CTID}" >/dev/null 2>&1; then
   log "Container ${CTID} existiert bereits -> kein pct create (idempotent)."
+  # Der Privilegien-Modus laesst sich nachtraeglich nicht flippen
+  # (Besitzrechte auf der Disk). Passt er nicht zum Wunsch, muss der CT neu
+  # erstellt werden – sonst scheitert spaeter der Image-Pull (unprivileged)
+  # bzw. die Isolation entspricht nicht dem Wunsch (privileged).
+  CT_PRIV="$(pct config "${CTID}" 2>/dev/null | awk -F': *' '/^unprivileged:/ {print $2}' || true)"
+  [[ -z "${CT_PRIV}" ]] && CT_PRIV="1"
+  if [[ "${CT_PRIV}" != "${UNPRIVILEGED}" ]]; then
+    die "Container ${CTID} existiert mit unprivileged=${CT_PRIV}, gewuenscht ist ${UNPRIVILEGED}. Bitte neu erstellen: pct stop ${CTID} && pct destroy ${CTID} && Einzeiler erneut laufen lassen."
+  fi
 else
   log "Erstelle LXC ${CTID} (${CPU} vCPU, ${RAM} MB RAM, ${DISK}G Disk) ..."
   pct create "${CTID}" "${TEMPLATE_STORAGE}:vztmpl/${OS_TEMPLATE}" \
