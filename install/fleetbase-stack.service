@@ -1,0 +1,16 @@
+[Unit]
+Description=Fleetbase Docker Stack (Compose, Ports 4200/8000)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/fleetbase
+ExecStart=/usr/bin/docker compose -f /opt/fleetbase/docker-compose.yml -f /opt/fleetbase/docker-compose.override.yml up -d
+ExecStop=/usr/bin/docker compose -f /opt/fleetbase/docker-compose.yml -f /opt/fleetbase/docker-compose.override.yml stop
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
