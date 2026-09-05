@@ -69,10 +69,24 @@ command -v pveam >/dev/null 2>&1 || die "pveam nicht gefunden. Auf dem Proxmox-H
 # CTID aus $1 erlauben: 'bash fleetbase.sh 103'
 if [[ "${1:-}" =~ ^[0-9]{2,}$ ]]; then CTID="$1"; fi
 
-# Kollision mit existierender VM/QEMU pruefen (pct status kennt nur CTs)
+# CT-ID wählbar (Default 103). pct status kennt nur CTs, daher zusätzlich
+# qm status pruefen. Ist die Wunsch-ID als QEMU-VM belegt, automatisch auf die
+# nächste freie ID ausweichen (max. 100 Versuche), statt hart abzubrechen.
+# Existierender CT mit gleicher ID wird weiterverwendet (idempotent, s.u.).
 if qm status "${CTID}" >/dev/null 2>&1; then
-  die "ID ${CTID} ist bereits als QEMU-VM belegt (qm status). Andere CTID waehlen, z.B. CTID=104."
+  log "WARNUNG: ID ${CTID} ist als QEMU-VM belegt -> suche naechste freie ID ..."
+  BUMPED=0
+  for ((try = 0; try < 100; try++)); do
+    CTID=$((CTID + 1))
+    if ! qm status "${CTID}" >/dev/null 2>&1 && ! pct status "${CTID}" >/dev/null 2>&1; then
+      BUMPED=1
+      break
+    fi
+  done
+  [[ "${BUMPED}" == "1" ]] || die "Keine freie CT-ID im Bereich gefunden. Bitte CTID manuell setzen, z.B. CTID=200."
+  log "Weiche auf freie ID ${CTID} aus (HOSTNAME=${HOSTNAME})."
 fi
+log "CT-ID: ${CTID}"
 
 # Storage-Warnung: local-lvm ist auf diesem Host knapp (thin-provisioned).
 # Kein harter Abbruch – thin erlaubt Overcommit – aber Hinweis ausgeben.

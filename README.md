@@ -26,6 +26,10 @@ Auf dem **Proxmox-Host als root** ausführen:
 bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/FleetBase-Proxmox/main/install/fleetbase.sh)"
 ```
 
+> Ist die Default-ID 103 belegt (QEMU-VM oder CT), weicht das Script automatisch
+> auf die nächste freie ID aus (z. B. 104) und meldet das im Log. Existierender
+> CT mit gleicher ID wird wiederverwendet (Update statt Neu-Erstellung).
+
 Nützliche Varianten:
 
 ```bash
