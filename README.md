@@ -29,6 +29,12 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/FleetBase
 > Ist die Default-ID 103 belegt (QEMU-VM oder CT), weicht das Script automatisch
 > auf die nächste freie ID aus (z. B. 104) und meldet das im Log. Existierender
 > CT mit gleicher ID wird wiederverwendet (Update statt Neu-Erstellung).
+>
+> Falls nach einem Update noch die alte Version anzukommen scheint
+> (`Andere CTID waehlen` statt `Weiche auf freie ID`): das ist der
+> GitHub-Raw-CDN-Cache (~5 Min). Prüfen mit
+> `wget -qO- <URL> | grep -c "Weiche auf freie ID"` (muss `1` ergeben),
+> oder mit Cache-Buster laden: URL + `?nocache=2` anhängen.
 
 Nützliche Varianten:
 
